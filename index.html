@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>London Underground in 3D</title>
+<link rel="icon" href="data:,">
+<style>
+  @font-face { font-family: "Lato"; font-weight: 400; src: url("fonts/lato-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Lato"; font-weight: 700; src: url("fonts/lato-latin-700-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Lato"; font-weight: 900; src: url("fonts/lato-latin-900-normal.woff2") format("woff2"); }
+  :root { --bg:#f4efe3; --ink:#2b2620; --muted:#7a7266; --panel:rgba(244,239,227,.88); --edge:rgba(43,38,32,.16); }
+  body.dark { --bg:#14161a; --ink:#ecebe6; --muted:#9a9a94; --panel:rgba(20,22,26,.86); --edge:rgba(236,235,230,.18); }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink); font-family:"Lato", system-ui, sans-serif; }
+  #gl { position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #labels { position:fixed; inset:0; pointer-events:none; }
+  .lbl { font-weight:700; font-size:11px; letter-spacing:.01em; color:var(--ink); white-space:nowrap; transform:translate(6px,-4px);
+         text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 2px var(--bg); transition: opacity .15s; }
+  .panel { position:fixed; background:var(--panel); border:1px solid var(--edge); border-radius:10px; padding:12px 14px; backdrop-filter: blur(6px); }
+  #title { top:14px; left:14px; max-width:300px; }
+  #title h1 { margin:0 0 2px; font-size:18px; font-weight:900; letter-spacing:.01em; }
+  #title p { margin:0; font-size:12px; line-height:1.4; color:var(--muted); }
+  #ctrl { top:14px; right:14px; width:230px; font-size:12px; }
+  #ctrl label { display:flex; align-items:center; gap:8px; margin:6px 0; cursor:pointer; user-select:none; }
+  #ctrl .row { margin:4px 0 10px; }
+  #ctrl input[type=range] { width:100%; accent-color: var(--ink); }
+  #ctrl h2 { margin:12px 0 4px; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .chip { width:14px; height:14px; border-radius:4px; flex:none; border:1px solid var(--edge); }
+  .off { opacity:.35; }
+  button { font:inherit; font-size:12px; color:var(--ink); background:transparent; border:1px solid var(--edge); border-radius:6px; padding:4px 8px; cursor:pointer; }
+  button:hover { background:var(--edge); }
+  #tip { position:fixed; pointer-events:none; display:none; background:var(--panel); border:1px solid var(--edge); border-radius:8px; padding:6px 9px; font-size:12px; line-height:1.35; }
+  #tip b { font-weight:900; }
+  #foot { position:fixed; left:14px; bottom:10px; font-size:10px; color:var(--muted); max-width:62vw; line-height:1.4; }
+  #sig { position:fixed; right:14px; bottom:10px; font-size:11px; font-weight:700; color:var(--muted); }
+  #msg { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; text-align:center; padding:30px; }
+  @media (max-width: 700px) { #title { display:none; } #ctrl { width:190px; top:8px; right:8px; } #foot { max-width:95vw; bottom:28px; } }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="labels"></div>
+<div class="panel" id="title">
+  <h1>London Underground in 3D</h1>
+  <p>Every line at its real height below (and above) the terrain. Drag to move the map, right-drag (or Option-drag) to turn and tilt, scroll to zoom to the cursor. You can tilt right under the ground. Heights are exaggerated; use the slider.</p>
+</div>
+<div class="panel" id="ctrl">
+  <div class="row"><div>Vertical exaggeration: <b id="exv">3</b>×</div><input id="ex" type="range" min="1" max="10" step="0.5" value="3"></div>
+  <label><input type="checkbox" id="cSurface" checked> Ground surface (see-through)</label>
+  <label><input type="checkbox" id="cRoads" disabled> Street grid</label>
+  <div id="mapnote" style="font-size:10.5px;color:var(--muted);margin:-2px 0 6px 22px;line-height:1.35"></div>
+  <label><input type="checkbox" id="cFoot" checked> Tunnel routes on the ground</label>
+  <label><input type="checkbox" id="cGround" checked> Contour lines (5 m)</label>
+  <label><input type="checkbox" id="cWater" checked> <span class="chip" style="background:#5aa9e0"></span>Thames &amp; canals</label>
+  <label><input type="checkbox" id="cDrops" checked> Station drop lines</label>
+  <label><input type="checkbox" id="cPortals" checked> Tunnel portals</label>
+  <label><input type="checkbox" id="cLabels" checked> Station labels</label>
+  <label><input type="checkbox" id="cFade" checked> Tint track behind the ground</label>
+  <label><input type="checkbox" id="cScale" checked> Tunnels at true width when close</label>
+  <label><input type="checkbox" id="cTrains" checked> Trains</label>
+  <div class="row" style="margin:4px 0 2px 24px; font-size:12px"><select id="tMode"><option value="live" selected>Live (TfL)</option><option value="sim">Simulated</option></select> <span id="tSpeedWrap" style="display:none">Speed <select id="tSpeed"><option value="1">1×</option><option value="10">10×</option><option value="30" selected>30×</option><option value="100">100×</option></select></span> <span id="tClock" style="margin-left:6px; opacity:.7"></span></div>
+  <h2>Lines</h2>
+  <div id="legend"></div>
+  <div style="display:flex; gap:6px; margin-top:10px"><button id="bTheme">Dark / cream</button><button id="bReset">Reset view</button></div>
+</div>
+<div id="tip"></div>
+<div id="foot">Contains OS data © Crown copyright and database right 2026. Map data © OpenStreetMap contributors (ODbL). Live train data: Powered by TfL Open Data. Platform levels from a TfL Freedom of Information response. Elizabeth line, DLR and Overground not included.</div>
+<div id="sig">Martin Bangratz · martincreates.com</div>
+<div id="msg">Loading…</div>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
