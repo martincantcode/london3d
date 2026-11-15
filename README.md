@@ -2,7 +2,7 @@
 
 An interactive 3D map of the London Underground: both tracks of every line at their real platform heights, running through the real terrain, with trains moving along them (live from TfL, or simulated). Plain Three.js, no build step, no API keys.
 
-**Live site:** `https://<your-username>.github.io/<repo-name>/` (after you enable GitHub Pages, see below)
+**Live site:** `https://martincantcode.github.io/london3d/`
 
 ## What you can do
 - Left-drag pans, right-drag (or Option/Alt-drag) rotates and tilts, scroll zooms to the cursor. You can tilt below the ground.
@@ -17,19 +17,6 @@ An interactive 3D map of the London Underground: both tracks of every line at th
 - **If the live feed is unreachable** (offline, blocked, rate limited) the page falls back to the simulation at London time. The simulation is not real timetable data: headways are typical per-line values and running times come from a simple accelerate / cruise / brake model.
 - **Water:** OSM polygons, lowered into the terrain; the Thames has no bathymetry. Some canals missing from the OSM export (e.g. the Grand Union west of Little Venice) are missing here too.
 - Terrain is OS Terrain 50 on a 100 m grid, so small features are smoothed.
-- Not tested on phones yet (touch controls, performance).
-
-## Run it locally
-Browsers block `fetch` from `file://`, so serve the folder:
-
-    python -m http.server 8000
-
-then open http://localhost:8000
-
-## Put it on GitHub Pages
-1. Create a public repository and upload the contents of this folder so that `index.html` is at the top level.
-2. Settings > Pages > Build and deployment > Deploy from a branch > `main` / `(root)`.
-3. After a minute the site is at `https://<your-username>.github.io/<repo-name>/`.
 
 ## Files
 - `index.html`, `main.js`: the page and the 3D scene.
@@ -45,6 +32,6 @@ then open http://localhost:8000
 - Platform levels: Transport for London Freedom of Information response FOI-0493-2223. I have not checked the re-use terms for FOI responses; check before reusing the data commercially.
 - Live train data: Powered by TfL Open Data (see TfL's open data terms).
 - Lato: SIL Open Font License 1.1. Three.js: MIT.
-- Code: no licence file is included yet; add one of your choice.
+- Code: MIT license.
 
 Debug in the browser console: `__v.trains.live.stats()` shows feed status, trains tracked and any unmatched station names.
